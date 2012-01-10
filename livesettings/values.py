@@ -164,6 +164,8 @@ class Value(object):
             self.use_default = False
 
         self.creation_counter = Value.creation_counter
+        self.svalue = None
+        self.configuration_settings = None
         Value.creation_counter += 1
 
     def __cmp__(self, other):
@@ -272,68 +274,10 @@ class Value(object):
 
     setting = property(fget = _setting)
 
-    def _value(self):
-        global is_setting_initializing
-        backend = get_overrides()
-
-        if backend.is_editable:
-            try:
-                val = backend.get_value(self.group.key, self.key)
-            except KeyError:
-                if self.use_default:
-                    val = self.default
-                else:
-                    raise SettingNotSet('%s.%s is not in your LIVESETTINGS_OPTIONS' % (self.group.key, self.key))
-
-        else:
-            try:
-                val = self.setting.value
-
-            except SettingNotSet, sns:
-                is_setting_initializing = False
-                if self.use_default:
-                    val = self.default
-                    if overrides:
-                        # maybe override the default
-                        grp = overrides.get(self.group.key, {})
-                        if grp.has_key(self.key):
-                            val = grp[self.key]
-                else:
-                    val = NOTSET
-
-            except AttributeError, ae:
-                is_setting_initializing = False
-                log.error("Attribute error: %s", ae)
-                log.error("%s: Could not get _value of %s", self.key, self.setting)
-                raise(ae)
-
-            except Exception, e:
-                global _WARN
-                if is_setting_initializing and isinstance(e, DatabaseError) and str(e).find("livesettings_setting") > -1:
-                    if not _WARN.has_key('livesettings_setting'):
-                        log.warn(str(e).strip())
-                        _WARN['livesettings_setting'] = True
-                    log.warn('Error loading livesettings from table, OK if you are in syncdb or before it. ROLLBACK')
-                    connection._rollback()
-
-                    if self.use_default:
-                        val = self.default
-                    else:
-                        raise ImproperlyConfigured("All settings used in startup must have defaults, %s.%s does not", self.group.key, self.key)
-                else:
-                    is_setting_initializing = False
-                    import traceback
-                    traceback.print_exc()
-                    log.error("Problem finding settings %s.%s, %s", self.group.key, self.key, e)
-                    raise SettingNotSet("Startup error, couldn't load %s.%s" %(self.group.key, self.key))
-            else:
-                is_setting_initializing = False
-        return val
-
     def update(self, value):
-        backend = get_overrides()
+        #backend = get_overrides()
 
-        if backend.is_editable:
+        if True:
             current_value = self.value
 
             new_value = self.to_python(value)
@@ -343,7 +287,10 @@ class Value(object):
 
                 db_value = self.get_db_prep_save(new_value)
 
-                backend.save_value(self.group.key, self.key, db_value)
+                self.configuration_settings.stored_settings[self.group.key][self.key] = db_value
+                self.configuration_settings.collection.save(self.configuration_settings.document)
+
+                self.svalue = new_value
 
                 signals.configuration_value_changed.send(self, old_value=current_value, new_value=new_value, setting=self)
 
@@ -353,14 +300,17 @@ class Value(object):
 
         return False
 
+    def set_value(self, new_value):
+        self.svalue = new_value
+
     @property
     def value(self):
-        val = self._value()
+        val = self.svalue
         return self.to_python(val)
 
     @property
     def editor_value(self):
-        val = self._value()
+        val = self.svalue
         return self.to_editor(val)
 
     # Subclasses should override the following methods where applicable

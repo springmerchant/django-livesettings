@@ -1,8 +1,8 @@
 from pymongo import *
 
 class LiveSettingBackend(object):
+    
     def __init__(self, siteid=-1):
-
         self.is_editable = True
         self.siteid = siteid
 

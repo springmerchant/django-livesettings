@@ -4,6 +4,7 @@ from livesettings.models import SettingNotSet
 from livesettings.utils import is_string_like
 
 import logging
+from pymongo import *
 
 log = logging.getLogger('configuration')
 
@@ -15,6 +16,16 @@ class ConfigurationSettings(object):
     class __impl(object):
         def __init__(self):
             self.settings = values.SortedDotDict()
+
+            connection = Connection()
+            db = connection.settings
+
+            self.collection = db.application_settings
+
+            self.document = self.collection.find_one({'siteid': 1})
+
+            self.stored_settings = self.document['SETTINGS']
+
             self.prereg = {}
 
         def __getitem__(self, key):
@@ -108,7 +119,10 @@ class ConfigurationSettings(object):
             if not groupkey in self.settings:
                 self.settings[groupkey] = g
 
+            value.svalue = self.stored_settings[groupkey][valuekey]
+            value.configuration_settings = self
             self.settings[groupkey][valuekey] = value
+
 
             return value
 

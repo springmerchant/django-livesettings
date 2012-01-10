@@ -19,10 +19,6 @@ def _pre_12():
 
 @csrf_protect
 def group_settings(request, group, template='livesettings/group_settings.html'):
-    # Determine what set of settings this editor is used for
-
-    backend = get_overrides()
-
     mgr = ConfigurationSettings()
     if group is None:
         settings = mgr
@@ -32,7 +28,7 @@ def group_settings(request, group, template='livesettings/group_settings.html'):
         title = settings.name
         log.debug('title: %s', title)
 
-    if backend.is_editable:
+    if True:
         # Create an editor customized for the current user
         #editor = forms.customized_editor(settings)
 
@@ -62,7 +58,7 @@ def group_settings(request, group, template='livesettings/group_settings.html'):
         'title': title,
         'group' : group,
         'form': form,
-        'use_db' : backend.is_editable,
+        'use_db' : True,
         'DJANGO_PRE_12' : _pre_12()
     }, context_instance=RequestContext(request))
 
