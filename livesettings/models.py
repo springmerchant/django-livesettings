@@ -46,28 +46,11 @@ def find_setting(group, key, site=None):
     siteid = _safe_get_siteid(site)
     setting = None
     
-    use_db, overrides = get_overrides(siteid)
+    backend = get_overrides(siteid)
     ck = cache_key('Setting', siteid, group, key)
     
-    if use_db:
-        try:
-            setting = cache_get(ck)
-
-        except NotCachedError, nce:
-            if loading.app_cache_ready():
-                try:
-                    setting = Setting.objects.get(site__id__exact=siteid, key__exact=key, group__exact=group)
-
-                except Setting.DoesNotExist:
-                    # maybe it is a "long setting"
-                    try:
-                        setting = LongSetting.objects.get(site__id__exact=siteid, key__exact=key, group__exact=group)
-           
-                    except LongSetting.DoesNotExist:
-                        pass
-            
-                cache_set(ck, value=setting)
-
+    if backend.is_editable:
+        setting = backend.get_value(group, key)
     else:
         grp = overrides.get(group, None)
         if grp and grp.has_key(key):
@@ -137,11 +120,11 @@ class Setting(models.Model, CachedObjectMixin):
             site = self.site
         except Site.DoesNotExist:
             self.site = Site.objects.get_current()
-            
+
         super(Setting, self).save(force_insert=force_insert, force_update=force_update)
-        
+
         self.cache_set()
-        
+
     class Meta:
         unique_together = ('site', 'group', 'key')
 
@@ -166,7 +149,7 @@ class LongSetting(models.Model, CachedObjectMixin):
 
     def cache_key(self, *args, **kwargs):
         # note same cache pattern as Setting.  This is so we can look up in one check.
-        # they can't overlap anyway, so this is moderately safe.  At the worst, the 
+        # they can't overlap anyway, so this is moderately safe.  At the worst, the
         # Setting will override a LongSetting.
         return cache_key('Setting', self.site, self.group, self.key)
 
@@ -181,7 +164,7 @@ class LongSetting(models.Model, CachedObjectMixin):
             self.site = Site.objects.get_current()
         super(LongSetting, self).save(force_insert=force_insert, force_update=force_update)
         self.cache_set()
-        
+
     class Meta:
         unique_together = ('site', 'group', 'key')
     

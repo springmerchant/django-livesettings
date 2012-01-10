@@ -5,6 +5,7 @@ from django.shortcuts import render_to_response
 from django.template import RequestContext
 from django.views.decorators.csrf import csrf_protect
 from django.views.decorators.cache import never_cache
+from django.utils.encoding import force_unicode
 from livesettings import ConfigurationSettings, forms
 from livesettings.overrides import get_overrides
 import django
@@ -20,7 +21,7 @@ def _pre_12():
 def group_settings(request, group, template='livesettings/group_settings.html'):
     # Determine what set of settings this editor is used for
 
-    use_db, overrides = get_overrides();
+    backend = get_overrides()
 
     mgr = ConfigurationSettings()
     if group is None:
@@ -31,7 +32,7 @@ def group_settings(request, group, template='livesettings/group_settings.html'):
         title = settings.name
         log.debug('title: %s', title)
 
-    if use_db:
+    if backend.is_editable:
         # Create an editor customized for the current user
         #editor = forms.customized_editor(settings)
 
@@ -47,7 +48,7 @@ def group_settings(request, group, template='livesettings/group_settings.html'):
                     if cfg.update(value):
 
                         # Give user feedback as to which settings were changed
-                        messages.add_message(request, messages.INFO, 'Updated %s on %s' % (cfg.key, cfg.group.key))
+                        messages.add_message(request, messages.INFO, 'Updated %s - %s' % (force_unicode(cfg.group.name), force_unicode(cfg.description)))
 
                 return HttpResponseRedirect(request.path)
         else:
@@ -61,9 +62,10 @@ def group_settings(request, group, template='livesettings/group_settings.html'):
         'title': title,
         'group' : group,
         'form': form,
-        'use_db' : use_db,
+        'use_db' : backend.is_editable,
         'DJANGO_PRE_12' : _pre_12()
     }, context_instance=RequestContext(request))
+
 group_settings = never_cache(permission_required('livesettings.change_setting')(group_settings))
 
 # Site-wide setting editor is identical, but without a group

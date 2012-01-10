@@ -4,6 +4,12 @@ for settings retrieval.
 
 from django.conf import settings as djangosettings
 from django.contrib.sites.models import Site
+
+from livesettings.backends import LiveSettingBackend
+
+from couchdbkit import *
+
+
 import logging
 
 __all__ = ['get_overrides']
@@ -44,14 +50,13 @@ def get_overrides(siteid=-1):
 
     Returns a tuple (DB_ALLOWED, SETTINGS)
     """
+    
     overrides = (True, {})
-    if hasattr(djangosettings, 'LIVESETTINGS_OPTIONS'):
-        if siteid == -1:
-            siteid = _safe_get_siteid(None)
-        
-        opts = djangosettings.LIVESETTINGS_OPTIONS
-        if opts.has_key(siteid):
-            opts = opts[siteid]
-            overrides = (opts.get('DB', True), opts['SETTINGS'])
 
-    return overrides
+    if siteid == -1:
+        siteid = _safe_get_siteid(None)
+
+    backend = LiveSettingBackend(siteid=siteid)
+    
+    if backend:
+        return backend

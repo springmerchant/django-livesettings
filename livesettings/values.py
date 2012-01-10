@@ -274,11 +274,11 @@ class Value(object):
 
     def _value(self):
         global is_setting_initializing
-        use_db, overrides = get_overrides()
+        backend = get_overrides()
 
-        if not use_db:
+        if backend.is_editable:
             try:
-                val = overrides[self.group.key][self.key]
+                val = backend.get_value(self.group.key, self.key)
             except KeyError:
                 if self.use_default:
                     val = self.default
@@ -331,9 +331,9 @@ class Value(object):
         return val
 
     def update(self, value):
-        use_db, overrides = get_overrides()
+        backend = get_overrides()
 
-        if use_db:
+        if backend.is_editable:
             current_value = self.value
 
             new_value = self.to_python(value)
@@ -343,20 +343,7 @@ class Value(object):
 
                 db_value = self.get_db_prep_save(new_value)
 
-                try:
-                    s = self.setting
-                    s.value = db_value
-
-                except SettingNotSet:
-                    s = self.make_setting(db_value)
-
-                if self.use_default and self.to_python(self.default) == self.to_python(new_value):
-                    if s.id:
-                        log.info("Deleted setting %s.%s", self.group.key, self.key)
-                        s.delete()
-                else:
-                    log.info("Updated setting %s.%s = %s", self.group.key, self.key, value)
-                    s.save()
+                backend.save_value(self.group.key, self.key, db_value)
 
                 signals.configuration_value_changed.send(self, old_value=current_value, new_value=new_value, setting=self)
 
