@@ -123,8 +123,10 @@ class ConfigurationSettings(object):
             value.configuration_settings = self
             self.settings[groupkey][valuekey] = value
 
-
             return value
+
+        def save_config(self):
+            pass
 
     __instance = None
 

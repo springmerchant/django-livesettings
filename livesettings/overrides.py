@@ -7,7 +7,6 @@ from django.contrib.sites.models import Site
 
 from livesettings.backends import LiveSettingBackend
 
-from couchdbkit import *
 
 
 import logging
