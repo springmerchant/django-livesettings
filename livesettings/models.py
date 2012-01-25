@@ -10,7 +10,7 @@ import logging
 
 log = logging.getLogger('configuration.models')
 
-__all__ = ['SettingNotSet', 'Setting', 'LongSetting', 'find_setting']
+__all__ = ['SettingNotSet', 'find_setting']
 
 try:
     is_site_initializing
@@ -69,13 +69,6 @@ class SettingNotSet(Exception):
         self.cachekey = cachekey
         self.args = [self.key, self.cachekey]
 
-class SettingManager(models.Manager):
-    def get_query_set(self):
-        all = super(SettingManager, self).get_query_set()
-        siteid = _safe_get_siteid(None)
-        return all.filter(site__id__exact=siteid)
-
-
 class ImmutableSetting(object):
     
     def __init__(self, group="", key="", value="", site=1):
@@ -95,76 +88,3 @@ class ImmutableSetting(object):
         
     def __repr__(self):
         return "ImmutableSetting: %s.%s=%s" % (self.group, self.key, self.value)
-
-
-class Setting(models.Model, CachedObjectMixin):
-    site = models.ForeignKey(Site, verbose_name=_('Site'))
-    group = models.CharField(max_length=100, blank=False, null=False)
-    key = models.CharField(max_length=100, blank=False, null=False)
-    value = models.CharField(max_length=255, blank=True)
-
-    objects = SettingManager()
-
-    def __nonzero__(self):
-        return self.id is not None
-
-    def cache_key(self, *args, **kwargs):
-        return cache_key('Setting', self.site, self.group, self.key)
-
-    def delete(self):
-        self.cache_delete()
-        super(Setting, self).delete()
-
-    def save(self, force_insert=False, force_update=False):
-        try:
-            site = self.site
-        except Site.DoesNotExist:
-            self.site = Site.objects.get_current()
-
-        super(Setting, self).save(force_insert=force_insert, force_update=force_update)
-
-        self.cache_set()
-
-    class Meta:
-        unique_together = ('site', 'group', 'key')
-
-
-class LongSettingManager(models.Manager):
-    def get_query_set(self):
-        all = super(LongSettingManager, self).get_query_set()
-        siteid = _safe_get_siteid(None)
-        return all.filter(site__id__exact=siteid)
-
-class LongSetting(models.Model, CachedObjectMixin):
-    """A Setting which can handle more than 255 characters"""
-    site = models.ForeignKey(Site, verbose_name=_('Site'))
-    group = models.CharField(max_length=100, blank=False, null=False)
-    key = models.CharField(max_length=100, blank=False, null=False)
-    value = models.TextField(blank=True)
-
-    objects = LongSettingManager()
-
-    def __nonzero__(self):
-        return self.id is not None
-
-    def cache_key(self, *args, **kwargs):
-        # note same cache pattern as Setting.  This is so we can look up in one check.
-        # they can't overlap anyway, so this is moderately safe.  At the worst, the
-        # Setting will override a LongSetting.
-        return cache_key('Setting', self.site, self.group, self.key)
-
-    def delete(self):
-        self.cache_delete()
-        super(LongSetting, self).delete()
-
-    def save(self, force_insert=False, force_update=False):
-        try:
-            site = self.site
-        except Site.DoesNotExist:
-            self.site = Site.objects.get_current()
-        super(LongSetting, self).save(force_insert=force_insert, force_update=force_update)
-        self.cache_set()
-
-    class Meta:
-        unique_together = ('site', 'group', 'key')
-    
