@@ -2,7 +2,6 @@
 
 http://code.google.com/p/django-values/
 """
-from decimal import Decimal
 from django import forms
 from django.core.exceptions import ImproperlyConfigured
 from django.db import connection, DatabaseError
@@ -19,14 +18,10 @@ import logging
 import signals
 
 __all__ = ['BASE_GROUP', 'ConfigurationGroup', 'Value', 'BooleanValue', 'DecimalValue', 'DurationValue',
-      'FloatValue', 'IntegerValue', 'ModuleValue', 'PercentValue', 'PositiveIntegerValue', 'SortedDotDict',
+      'FloatValue', 'IntegerValue', 'ModuleValue','PositiveIntegerValue', 'SortedDotDict',
       'StringValue', 'LongStringValue', 'MultipleStringValue', 'LongMultipleStringValue', 'PasswordValue']
 
 _WARN = {}
-try:
-    is_setting_initializing
-except:
-    is_setting_initializing = True  # until the first success find "livesettings_setting" table, by any thread
 
 
 log = logging.getLogger('configuration')
