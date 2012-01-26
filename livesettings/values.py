@@ -461,56 +461,6 @@ class IntegerValue(Value):
         else:
             return unicode(value)
 
-
-# Deprecated PercentValue does not work good and can not be fixed
-# without duplicating long modified parts of Django. #29
-# It is better to Replace PercentValue(...) by DecimalValue(... min_value=0, max_value=100, max_decimal_places=2)
-# and easily divide result value by 100 in the user application.
-class PercentValue(Value):
-
-    class field(forms.DecimalField):
-
-        def __init__(self, *args, **kwargs):
-            import warnings
-            warnings.warn(
-                "class livesettings.PercentValue is deprecated. It should be replaced in config.py by " \
-                "DecimalValue(... min_value=0, max_value=100) and the result divided by 100 in the app.",
-                DeprecationWarning
-            )
-            kwargs['required'] = False
-            forms.DecimalField.__init__(self, 100, 0, 5, 2, *args, **kwargs)
-
-        def clean(self, value):
-            if value == '':
-                value = 0
-            value = super(forms.DecimalField, self).clean(value)
-            try:
-                value = Decimal(value)
-            except:
-                raise forms.ValidationError('This value must be a decimal number.')
-            return unicode(Decimal(value)/100)
-        
-        class widget(forms.TextInput):
-            def render(self, name, value, attrs=None):
-                # Place a percent sign after a smaller text field
-                try:
-                    value = unicode("%.2f" % (Decimal(value)*100))
-                except:
-                    value = "N/A"
-                attrs['size'] = attrs['max_length'] = 6
-                return mark_safe(super(forms.TextInput, self).render(name, value, attrs) + '%')
-
-    def to_python(self, value):
-        if value == NOTSET:
-            value = 0
-        return Decimal(value)
-
-    def to_editor(self, value):
-        if value == NOTSET:
-            return "0"
-        else:
-            return unicode(value)
-
 class PositiveIntegerValue(IntegerValue):
 
     class field(forms.IntegerField):
